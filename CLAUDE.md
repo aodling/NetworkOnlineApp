@@ -4,6 +4,14 @@
 A Node.js application that monitors internet connectivity and displays status via a web interface with real-time WebSocket updates.
 
 ## Quick Start
+
+### Using Docker (recommended)
+```bash
+docker run -d -p 3000:3000 ghcr.io/aodling/networkonlineapp:latest
+```
+Then open http://localhost:3000
+
+### Local Development
 ```bash
 npm install
 npm start
