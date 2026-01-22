@@ -1,0 +1,13 @@
+{
+  "name": "network-online-app",
+  "version": "1.0.0",
+  "description": "Monitor internet connectivity with real-time web interface",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ping": "^0.4.4",
+    "ws": "^8.18.0"
+  }
+}

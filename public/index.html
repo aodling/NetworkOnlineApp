@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Status</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .status-indicator {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+    .status-indicator.online {
+      background: #00c853;
+      box-shadow: 0 0 40px rgba(0, 200, 83, 0.5);
+    }
+    .status-indicator.offline {
+      background: #ff1744;
+      box-shadow: 0 0 40px rgba(255, 23, 68, 0.5);
+    }
+    .status-indicator.unknown {
+      background: #666;
+      box-shadow: 0 0 40px rgba(102, 102, 102, 0.5);
+    }
+    .status-text {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 2rem;
+    }
+    .status-text.online { color: #00c853; }
+    .status-text.offline { color: #ff1744; }
+    .status-text.unknown { color: #666; }
+    .info-card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      min-width: 300px;
+    }
+    .info-label {
+      font-size: 0.875rem;
+      color: #aaa;
+      margin-bottom: 0.5rem;
+    }
+    .info-value {
+      font-size: 1.5rem;
+      font-weight: 500;
+    }
+    .connection-status {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      font-size: 0.75rem;
+      color: #666;
+    }
+    .connection-status.connected { color: #00c853; }
+  </style>
+</head>
+<body>
+  <div class="connection-status" id="wsStatus">Connecting...</div>
+
+  <div class="container">
+    <div class="status-indicator unknown" id="indicator">?</div>
+    <div class="status-text unknown" id="statusText">Connecting...</div>
+
+    <div class="info-card">
+      <div class="info-label">Duration in current state</div>
+      <div class="info-value" id="duration">--</div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-label">Time since last offline</div>
+      <div class="info-value" id="lastOffline">--</div>
+    </div>
+  </div>
+
+  <script>
+    let state = {
+      isOnline: null,
+      stateChangedAt: null,
+      lastOfflineAt: null
+    };
+
+    const indicator = document.getElementById('indicator');
+    const statusText = document.getElementById('statusText');
+    const duration = document.getElementById('duration');
+    const lastOffline = document.getElementById('lastOffline');
+    const wsStatus = document.getElementById('wsStatus');
+
+    function formatDuration(ms) {
+      if (ms < 0) ms = 0;
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (days > 0) {
+        return `${days}d ${hours % 24}h ${minutes % 60}m`;
+      }
+      if (hours > 0) {
+        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+      }
+      if (minutes > 0) {
+        return `${minutes}m ${seconds % 60}s`;
+      }
+      return `${seconds}s`;
+    }
+
+    function updateDisplay() {
+      const now = Date.now();
+
+      if (state.isOnline === null) {
+        indicator.className = 'status-indicator unknown';
+        indicator.textContent = '?';
+        statusText.className = 'status-text unknown';
+        statusText.textContent = 'Connecting...';
+        duration.textContent = '--';
+        lastOffline.textContent = '--';
+        return;
+      }
+
+      if (state.isOnline) {
+        indicator.className = 'status-indicator online';
+        indicator.textContent = '✓';
+        statusText.className = 'status-text online';
+        statusText.textContent = 'Online';
+      } else {
+        indicator.className = 'status-indicator offline';
+        indicator.textContent = '✕';
+        statusText.className = 'status-text offline';
+        statusText.textContent = 'Offline';
+      }
+
+      if (state.stateChangedAt) {
+        duration.textContent = formatDuration(now - state.stateChangedAt);
+      }
+
+      if (state.lastOfflineAt) {
+        lastOffline.textContent = formatDuration(now - state.lastOfflineAt) + ' ago';
+      } else {
+        lastOffline.textContent = 'Never';
+      }
+    }
+
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => {
+        wsStatus.textContent = 'Connected';
+        wsStatus.className = 'connection-status connected';
+      };
+
+      ws.onmessage = (event) => {
+        state = JSON.parse(event.data);
+        updateDisplay();
+      };
+
+      ws.onclose = () => {
+        wsStatus.textContent = 'Disconnected - Reconnecting...';
+        wsStatus.className = 'connection-status';
+        setTimeout(connect, 2000);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    // Update display every second for live duration updates
+    setInterval(updateDisplay, 1000);
+
+    // Start WebSocket connection
+    connect();
+  </script>
+</body>
+</html>
