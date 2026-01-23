@@ -1,9 +1,17 @@
 const EventEmitter = require('events');
 const fs = require('fs');
 const path = require('path');
+const mqtt = require('mqtt');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
+
+// MQTT Configuration
+const MQTT_HOST = process.env.MQTT_HOST || '172.16.30.20';
+const MQTT_PORT = process.env.MQTT_PORT || 1883;
+const MQTT_USERNAME = process.env.MQTT_USERNAME || 'webclient';
+const MQTT_PASSWORD = process.env.MQTT_PASSWORD || 'webclient';
+const MQTT_TOPIC = process.env.MQTT_TOPIC || 'monitoring/online';
 
 class StateManager extends EventEmitter {
   constructor() {
@@ -11,7 +19,49 @@ class StateManager extends EventEmitter {
     this.isOnline = null;
     this.stateChangedAt = null;
     this.lastOfflineAt = null;
+    this.mqttClient = null;
+    this.mqttConnected = false;
     this.load();
+    this.initMqtt();
+  }
+
+  initMqtt() {
+    const url = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
+    console.log(`[MQTT] Connecting to ${url}`);
+
+    this.mqttClient = mqtt.connect(url, {
+      username: MQTT_USERNAME,
+      password: MQTT_PASSWORD,
+      reconnectPeriod: 5000
+    });
+
+    this.mqttClient.on('connect', () => {
+      console.log('[MQTT] Connected');
+      this.mqttConnected = true;
+      this.publishMqtt();
+    });
+
+    this.mqttClient.on('error', (err) => {
+      console.error('[MQTT] Error:', err.message);
+    });
+
+    this.mqttClient.on('offline', () => {
+      console.log('[MQTT] Disconnected');
+      this.mqttConnected = false;
+    });
+  }
+
+  publishMqtt() {
+    if (!this.mqttConnected || this.isOnline === null) return;
+
+    const message = JSON.stringify({ internet_online: this.isOnline });
+    this.mqttClient.publish(MQTT_TOPIC, message, { retain: true }, (err) => {
+      if (err) {
+        console.error('[MQTT] Publish error:', err.message);
+      } else {
+        console.log(`[MQTT] Published to ${MQTT_TOPIC}: ${message}`);
+      }
+    });
   }
 
   load() {
@@ -52,6 +102,7 @@ class StateManager extends EventEmitter {
         this.save();
       }
       console.log(`[STATE] Initial state: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
+      this.publishMqtt();
       this.emit('change', this.getState());
       return;
     }
@@ -69,6 +120,7 @@ class StateManager extends EventEmitter {
       }
 
       console.log(`[STATE] Status changed: ${prevState} -> ${newState} at ${new Date(now).toISOString()}`);
+      this.publishMqtt();
       this.emit('change', this.getState());
     }
   }
