@@ -1,0 +1,128 @@
+:root {
+    /* Background */
+    --color-bg-primary: #1a1a2e;
+    --color-bg-secondary: #16213e;
+    --color-bg-elevated: rgba(255, 255, 255, 0.08);
+
+    /* Text */
+    --color-text-primary: #eeeeee;
+    --color-text-secondary: #a0a0a0;
+    --color-text-muted: #666666;
+
+    /* Accent */
+    --color-accent: #4ecca3;
+    --color-accent-hover: #3db892;
+
+    /* Status */
+    --color-success: #00c853;
+    --color-warning: #f39c12;
+    --color-error: #ff1744;
+
+    /* Borders & Shadows */
+    --color-border: rgba(255, 255, 255, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+    /* Spacing & Radius */
+    --radius-md: 8px;
+    --radius-lg: 12px;
+
+    /* Typography */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    text-align: center;
+    padding: 2rem;
+}
+
+.status-indicator {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.status-indicator.online {
+    background: var(--color-success);
+    box-shadow: 0 0 40px rgba(0, 200, 83, 0.5);
+}
+
+.status-indicator.offline {
+    background: var(--color-error);
+    box-shadow: 0 0 40px rgba(255, 23, 68, 0.5);
+}
+
+.status-indicator.unknown {
+    background: var(--color-text-muted);
+    box-shadow: 0 0 40px rgba(102, 102, 102, 0.5);
+}
+
+.status-text {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+}
+
+.status-text.online {
+    color: var(--color-success);
+}
+
+.status-text.offline {
+    color: var(--color-error);
+}
+
+.status-text.unknown {
+    color: var(--color-text-muted);
+}
+
+.info-card {
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    min-width: 300px;
+}
+
+.info-label {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.info-value {
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+.connection-status {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.connection-status.connected {
+    color: var(--color-success);
+}
