@@ -10,23 +10,43 @@ const CHECK_INTERVAL = 1000;
 
 const stateManager = new StateManager();
 
+// MIME types for static files
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.ico': 'image/x-icon'
+};
+
 // HTTP server for static files
 const server = http.createServer((req, res) => {
+  let filePath;
   if (req.url === '/' || req.url === '/index.html') {
-    const filePath = path.join(__dirname, 'public', 'index.html');
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(500);
-        res.end('Error loading page');
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(data);
-    });
+    filePath = path.join(__dirname, 'public', 'index.html');
   } else {
-    res.writeHead(404);
-    res.end('Not found');
+    filePath = path.join(__dirname, 'public', req.url);
   }
+
+  const ext = path.extname(filePath);
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      if (err.code === 'ENOENT') {
+        res.writeHead(404);
+        res.end('Not found');
+      } else {
+        res.writeHead(500);
+        res.end('Error loading file');
+      }
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(data);
+  });
 });
 
 // WebSocket server
