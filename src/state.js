@@ -23,6 +23,15 @@ class StateManager extends EventEmitter {
     this.mqttConnected = false;
     this.load();
     this.initMqtt();
+    this.startPeriodicPublish();
+  }
+
+  startPeriodicPublish() {
+    const ONE_HOUR = 60 * 60 * 1000;
+    setInterval(() => {
+      console.log('[MQTT] Periodic hourly publish');
+      this.publishMqtt();
+    }, ONE_HOUR);
   }
 
   initMqtt() {
