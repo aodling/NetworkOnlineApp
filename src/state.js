@@ -19,6 +19,7 @@ class StateManager extends EventEmitter {
     this.isOnline = null;
     this.stateChangedAt = null;
     this.lastOfflineAt = null;
+    this.onlineSince = null;
     this.mqttClient = null;
     this.mqttConnected = false;
     this.load();
@@ -78,7 +79,8 @@ class StateManager extends EventEmitter {
       if (fs.existsSync(STATE_FILE)) {
         const data = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
         this.lastOfflineAt = data.lastOfflineAt || null;
-        console.log(`[STATE] Loaded persisted state: lastOfflineAt=${this.lastOfflineAt ? new Date(this.lastOfflineAt).toISOString() : 'never'}`);
+        this.onlineSince = data.onlineSince || null;
+        console.log(`[STATE] Loaded persisted state: lastOfflineAt=${this.lastOfflineAt ? new Date(this.lastOfflineAt).toISOString() : 'never'}, onlineSince=${this.onlineSince ? new Date(this.onlineSince).toISOString() : 'never'}`);
       }
     } catch (err) {
       console.error('[STATE] Failed to load state:', err.message);
@@ -91,7 +93,8 @@ class StateManager extends EventEmitter {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
       const data = {
-        lastOfflineAt: this.lastOfflineAt
+        lastOfflineAt: this.lastOfflineAt,
+        onlineSince: this.onlineSince
       };
       fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2));
     } catch (err) {
@@ -105,12 +108,24 @@ class StateManager extends EventEmitter {
     // Initialize state on first update
     if (this.isOnline === null) {
       this.isOnline = isOnline;
-      this.stateChangedAt = now;
-      if (!isOnline) {
+      if (isOnline) {
+        // Use persisted onlineSince if available, otherwise use now
+        if (this.onlineSince) {
+          this.stateChangedAt = this.onlineSince;
+          console.log(`[STATE] Initial state: ONLINE (restored from ${new Date(this.onlineSince).toISOString()})`);
+        } else {
+          this.stateChangedAt = now;
+          this.onlineSince = now;
+          this.save();
+          console.log(`[STATE] Initial state: ONLINE`);
+        }
+      } else {
+        this.stateChangedAt = now;
         this.lastOfflineAt = now;
+        this.onlineSince = null;
         this.save();
+        console.log(`[STATE] Initial state: OFFLINE`);
       }
-      console.log(`[STATE] Initial state: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
       this.publishMqtt();
       this.emit('change', this.getState());
       return;
@@ -123,10 +138,13 @@ class StateManager extends EventEmitter {
 
       this.isOnline = isOnline;
       this.stateChangedAt = now;
-      if (!isOnline) {
+      if (isOnline) {
+        this.onlineSince = now;
+      } else {
         this.lastOfflineAt = now;
-        this.save();
+        this.onlineSince = null;
       }
+      this.save();
 
       console.log(`[STATE] Status changed: ${prevState} -> ${newState} at ${new Date(now).toISOString()}`);
       this.publishMqtt();
